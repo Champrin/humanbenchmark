@@ -642,6 +642,9 @@ class AimTrainer {
     if (!this.currentColorEl) return;
     this.currentColorEl.textContent = this.currentColor === 'blue' ? '蓝色' : '红色';
     this.currentColorEl.dataset.color = this.currentColor;
+
+    // 训练区域背景与当前应击打颜色保持一致
+    this.arena.dataset.color = this.currentColor;
   }
 
   updateTimeLeft(seconds) {
