@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FPS 反应速度测试 - 射击训练</title>
+  <meta name="description" content="FPS 反应速度测试：多目标射击训练，训练快速定位、瞄准与目标切换能力。" />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- 顶部标题栏 -->
+  <header class="header">
+    <div class="logo">🎯 FPS 瞄准训练</div>
+    <nav class="nav">
+      <a href="#howto">玩法说明</a>
+      <a href="#leaderboard">排行榜</a>
+      <a href="#stats">我的数据</a>
+    </nav>
+  </header>
+
+  <!-- 主区域 -->
+  <main class="container">
+    <!-- 左侧：游戏区域 -->
+    <section class="game-panel">
+      <!-- HUD -->
+      <div class="hud" id="hud">
+        <div class="hud-item">
+          <span class="hud-label">得分</span>
+          <span class="hud-value" id="score">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">命中率</span>
+          <span class="hud-value" id="accuracy">0%</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">剩余时间</span>
+          <span class="hud-value" id="timeLeft">00:00</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">连击</span>
+          <span class="hud-value" id="streak">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">干扰命中</span>
+          <span class="hud-value" id="decoyHits">0</span>
+        </div>
+      </div>
+
+      <!-- 游戏画布 -->
+      <div class="arena" id="arena">
+        <!-- 开始界面 -->
+        <div class="start-screen" id="startScreen">
+          <h1>FPS 反应速度测试</h1>
+          <p>屏幕同时出现多个目标，击破一个立即刷新。训练快速定位与目标切换。</p>
+          <div class="settings">
+            <div class="setting-row">
+              <label for="modeSelect">模式</label>
+              <select id="modeSelect">
+                <option value="classic">经典模式</option>
+                <option value="precision">精准模式</option>
+                <option value="hardcore">硬核模式</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label for="difficultySelect">难度</label>
+              <div class="segmented" id="difficultySelect">
+                <button type="button" class="seg-btn active" data-value="easy">简单</button>
+                <button type="button" class="seg-btn" data-value="medium">中等</button>
+                <button type="button" class="seg-btn" data-value="hard">困难</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label for="durationSelect">时长</label>
+              <div class="segmented" id="durationSelect">
+                <button type="button" class="seg-btn active" data-value="15">15秒</button>
+                <button type="button" class="seg-btn" data-value="30">30秒</button>
+                <button type="button" class="seg-btn" data-value="60">60秒</button>
+              </div>
+            </div>
+          </div>
+          <button class="start-btn" id="startBtn">开始训练</button>
+          <p class="tip">提示：保持准星稳定，优先打击距离最近的目标；红色纯色圆为干扰项，点击会扣分。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 玩法说明 -->
+    <section class="info-section" id="howto">
+      <h2>玩法说明</h2>
+      <ol class="howto-list">
+        <li>选择模式、难度和训练时长，点击“开始训练”。</li>
+        <li>屏幕会同时出现多个圆形目标。</li>
+        <li>点击命中目标即得分，目标被击破后立即刷新新目标。</li>
+        <li>点击空白处计为未命中，连击数会清零。</li>
+        <li>时间结束后查看成绩，可选择“再来一局”。</li>
+      </ol>
+      <div class="howto-cards">
+        <div class="howto-card">
+          <h3>经典模式</h3>
+          <p>目标静止，适合热身与基础定位。</p>
+        </div>
+        <div class="howto-card">
+          <h3>精准模式</h3>
+          <p>目标缓慢移动，训练追踪与微调。</p>
+        </div>
+        <div class="howto-card">
+          <h3>硬核模式</h3>
+          <p>目标快速移动，训练极限反应。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 排行榜 -->
+    <section class="info-section" id="leaderboard">
+      <div class="section-header">
+        <h2>排行榜</h2>
+        <button type="button" class="ghost-btn" id="clearScoresBtn">清空记录</button>
+      </div>
+      <div class="table-wrap">
+        <table class="score-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>得分</th>
+              <th>命中率</th>
+              <th>模式</th>
+              <th>难度</th>
+              <th>时长</th>
+              <th>时间</th>
+            </tr>
+          </thead>
+          <tbody id="scoreTableBody">
+            <tr class="empty-row">
+              <td colspan="7">暂无训练记录，完成一局后自动保存。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 我的数据 -->
+    <section class="info-section" id="stats">
+      <h2>我的数据</h2>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <span>总场次</span>
+          <strong id="totalRounds">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>总命中</span>
+          <strong id="totalHits">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>总射击</span>
+          <strong id="totalShots">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>综合命中率</span>
+          <strong id="overallAccuracy">0%</strong>
+        </div>
+        <div class="stat-card">
+          <span>最高连击</span>
+          <strong id="bestStreakStat">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>最快平均反应</span>
+          <strong id="bestReaction">--</strong>
+        </div>
+        <div class="stat-card">
+          <span>最高得分</span>
+          <strong id="highestScore">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>最近训练</span>
+          <strong id="lastPlayed">--</strong>
+        </div>
+      </div>
+    </section>
+  </main>
+
+
+  <script src="script.js"></script>
+</body>
+</html>
