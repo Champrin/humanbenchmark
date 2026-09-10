@@ -620,6 +620,9 @@ class AimTrainer {
         this.repaintTargets();
       }
       this.spawnTarget();
+
+      // 经典模式与固定颜色模式：命中目标后，干扰项随机改变位置
+      if (this.shouldMoveDecoys()) this.moveDecoysToRandomPositions();
       this.updateCurrentColor();
     } else {
       this.misses++;
@@ -636,6 +639,44 @@ class AimTrainer {
   removeTarget(targetElement) {
     this.targets = this.targets.filter(t => t.element !== targetElement);
     targetElement.remove();
+  }
+
+  shouldMoveDecoys() {
+    return ['classic', 'fixedColor'].includes(this.selected.mode);
+  }
+
+  // 重新生成所有干扰项位置，保持数量与外观不变
+  moveDecoysToRandomPositions() {
+    const decoys = this.targets.filter(targetObj => targetObj.isDecoy);
+    if (decoys.length === 0) return;
+
+    const arenaRect = this.arena.getBoundingClientRect();
+    const occupied = this.targets.filter(targetObj => !targetObj.isDecoy);
+
+    decoys.forEach(decoy => {
+      for (let attempt = 0; attempt < SPAWN_MAX_ATTEMPTS; attempt++) {
+        const halfWidth = decoy.width / 2;
+        const halfHeight = decoy.height / 2;
+        const candidate = {
+          x: randomRange(halfWidth, arenaRect.width - halfWidth),
+          y: randomRange(halfHeight, arenaRect.height - halfHeight),
+          width: decoy.width,
+          height: decoy.height
+        };
+
+        const conflicts = [...occupied, ...decoys.filter(d => d !== decoy)]
+          .filter(existing => existing !== decoy)
+          .some(existing => isOverlapping(candidate, existing));
+        if (!conflicts) {
+          decoy.x = candidate.x;
+          decoy.y = candidate.y;
+          occupied.push(decoy);
+          break;
+        }
+      }
+
+      this.clampTarget(decoy, arenaRect);
+    });
   }
 
   // 计算点击位置相对目标中心的精准度：中心 = 1，边缘 = 0
