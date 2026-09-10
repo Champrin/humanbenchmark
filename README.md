@@ -1,3 +1,5 @@
+FPS 反应速度测试 - 射击训练 (RoboMaster 装甲板版)
+
 参考 `https://humanbenchmark.me/zh/tests/fps-reaction`
 
 用作 IRobot 算法组考核
