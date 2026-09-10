@@ -74,7 +74,7 @@ body {
 /* ===== HUD ===== */
 .hud {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 12px;
 }
 
@@ -102,6 +102,20 @@ body {
   font-size: 1.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.color-indicator {
+  color: #ffffff;
+}
+
+.color-indicator[data-color="blue"] {
+  color: #60a5fa;
+  text-shadow: 0 0 12px rgba(59, 130, 246, 0.75);
+}
+
+.color-indicator[data-color="red"] {
+  color: #f87171;
+  text-shadow: 0 0 12px rgba(220, 38, 38, 0.75);
 }
 
 /* ===== 游戏区域 ===== */
@@ -231,42 +245,74 @@ body {
   position: absolute;
   /* 目标中心定位 */
   transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgb(220, 38, 38) 0%,
-    rgb(220, 38, 38) 22%,
-    rgb(255, 255, 255) 22%,
-    rgb(255, 255, 255) 40%,
-    rgb(239, 68, 68) 40%,
-    rgb(239, 68, 68) 62%,
-    rgb(255, 255, 255) 62%,
-    rgb(255, 255, 255) 78%,
-    rgb(220, 38, 38) 78%
-  );
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  padding: 0 7px;
+  box-shadow:
+    0 0 18px var(--target-glow),
+    inset 0 0 16px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  user-select: none;
+  --target-glow: rgba(59, 130, 246, 0.7);
   /* 自定义准星 */
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2'%3E%3Ccircle cx='16' cy='16' r='9'/%3E%3Cline x1='16' y1='1' x2='16' y2='7'/%3E%3Cline x1='16' y1='25' x2='16' y2='31'/%3E%3Cline x1='1' y1='16' x2='7' y2='16'/%3E%3Cline x1='25' y1='16' x2='31' y2='16'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%23ef4444'/%3E%3C/svg%3E") 16 16, crosshair;
   touch-action: none;
-  box-shadow: rgba(239, 68, 68, 0.6) 0px 0px 16px;
 }
 
 .target:hover {
-  filter: brightness(1.08);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 0 26px var(--target-glow),
+    inset 0 0 22px rgba(255, 255, 255, 0.12);
 }
 
-.target::after {
-  content: none;
+.target[data-color="blue"] {
+  --target-glow: rgba(59, 130, 246, 0.75);
 }
 
-/* ===== 干扰项：纯色红色，无靶心 ===== */
+.target[data-color="red"] {
+  --target-glow: rgba(239, 68, 68, 0.75);
+}
+
+.target-bar {
+  width: 7px;
+  height: 72%;
+  border-radius: 4px;
+  flex: none;
+  box-shadow: 0 0 10px currentColor, 0 0 18px currentColor;
+  background: currentColor;
+}
+
+.target[data-color="blue"] .target-bar {
+  color: #3b82f6;
+}
+
+.target[data-color="red"] .target-bar {
+  color: #ef4444;
+}
+
+.target-number {
+  flex: 1;
+  text-align: center;
+  font-family: "Arial Black", "Segoe UI", sans-serif;
+  font-size: var(--target-number-size, 34px);
+  font-weight: 900;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow:
+    0 0 12px rgba(255, 255, 255, 0.9),
+    0 0 26px rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+}
+
+/* 干扰项保持同一视觉体系，但颜色始终与当前目标相反 */
 .target.decoy {
-  background: rgb(220, 38, 38);
-  box-shadow: rgba(220, 38, 38, 0.55) 0px 0px 14px;
-}
-
-.target.decoy:hover {
-  filter: brightness(0.92);
+  outline: 1px solid rgba(255, 255, 255, 0.28);
+  outline-offset: -3px;
 }
 
 /* ===== 结算界面 ===== */

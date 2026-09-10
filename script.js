@@ -3,9 +3,9 @@
 
 /* ===== 全局配置 ===== */
 const DIFFICULTY_CONFIG = {
-  easy:   { targetSize: 60, targetCount: 4, lifespan: 1500 },
-  medium: { targetSize: 45, targetCount: 5, lifespan: 1000 },
-  hard:   { targetSize: 32, targetCount: 6, lifespan: 700 }
+  easy:   { targetWidth: 96, targetHeight: 62, targetCount: 4, lifespan: 1500 },
+  medium: { targetWidth: 84, targetHeight: 56, targetCount: 5, lifespan: 1000 },
+  hard:   { targetWidth: 72, targetHeight: 50, targetCount: 6, lifespan: 700 }
 };
 
 const MODE_CONFIG = {
@@ -14,10 +14,20 @@ const MODE_CONFIG = {
   hardcore:  { scorePerHit: 200, movingTargets: true, speed: 3.0 }
 };
 
-// 干扰项配置：纯色红色圆，点击扣分
+// 目标颜色：蓝 / 红
+const TARGET_COLORS = ['blue', 'red'];
+const COLOR_RGB = {
+  blue: { core: '59, 130, 246', glow: '96, 165, 250' },
+  red: { core: '220, 38, 38', glow: '248, 113, 113' }
+};
+
+// 目标上显示的数字范围
+const TARGET_NUMBER_RANGE = { min: 1, max: 5 };
+
+// 干扰项配置：与当前目标颜色相反，点击扣分
 const DECOY_CONFIG = {
   count: 2,         // 同屏干扰项数量
-  size: 44,         // 干扰项直径
+  sizeScale: 1.08,  // 干扰项略大，便于识别但仍保持同类外形
   penalty: 50       // 点击扣分
 };
 
@@ -57,12 +67,28 @@ function randomRange(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-// 判断两个圆形目标是否重叠（含最小间隙）
+// 随机生成 1-5 的整数
+function randomTargetNumber() {
+  return Math.floor(
+    randomRange(TARGET_NUMBER_RANGE.min, TARGET_NUMBER_RANGE.max + 1)
+  );
+}
+
+// 随机生成蓝/红
+function randomTargetColor() {
+  return TARGET_COLORS[Math.floor(Math.random() * TARGET_COLORS.length)];
+}
+
+// 获取相反颜色
+function oppositeColor(color) {
+  return color === 'blue' ? 'red' : 'blue';
+}
+
+// 判断两个长方形目标是否重叠（含最小间隙）
 function isOverlapping(a, b, spacing = TARGET_SPACING) {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  const minDistance = (a.size + b.size) / 2 + spacing;
-  return dx * dx + dy * dy < minDistance * minDistance;
+  const overlapX = (a.width + b.width) / 2 + spacing - Math.abs(a.x - b.x);
+  const overlapY = (a.height + b.height) / 2 + spacing - Math.abs(a.y - b.y);
+  return overlapX > 0 && overlapY > 0;
 }
 
 function formatDate(timestamp) {
@@ -83,6 +109,7 @@ class AimTrainer {
     this.timeLeftEl = document.getElementById('timeLeft');
     this.streakEl = document.getElementById('streak');
     this.decoyHitsEl = document.getElementById('decoyHits');
+    this.currentColorEl = document.getElementById('currentColor');
     this.modeSelect = document.getElementById('modeSelect');
     this.difficultyGroup = document.getElementById('difficultySelect');
     this.durationGroup = document.getElementById('durationSelect');
@@ -126,6 +153,11 @@ class AimTrainer {
       this.startGame();
     });
 
+    this.modeSelect.addEventListener('change', () => {
+      this.selected.mode = this.modeSelect.value;
+      this.saveSettings();
+    });
+
     this.difficultyGroup.addEventListener('click', (e) => {
       const btn = e.target.closest('.seg-btn');
       if (!btn) return;
@@ -140,8 +172,11 @@ class AimTrainer {
       this.updateActiveButtons(this.durationGroup, btn);
     });
 
-    this.arena.addEventListener('click', (e) => {
-      if (this.state === GAME_STATE.RUNNING) this.handleClick(e);
+    this.arena.addEventListener('pointerdown', (e) => {
+      if (this.state !== GAME_STATE.RUNNING) return;
+      if (e.button !== 0) return;
+      e.preventDefault();
+      this.handleClick(e);
     });
 
     window.addEventListener('resize', () => {
@@ -202,6 +237,7 @@ class AimTrainer {
     this.streak = 0;
     this.bestStreak = 0;
     this.reactionTimes = [];
+    this.currentColor = randomTargetColor();
 
     this.arena.querySelectorAll('.target').forEach(t => t.remove());
     this.startScreen.style.display = 'none';
@@ -210,6 +246,7 @@ class AimTrainer {
     this.updateAccuracy();
     this.updateStreak();
     this.updateDecoyHits();
+    this.updateCurrentColor();
     this.updateTimeLeft(this.selected.duration);
 
     this.state = GAME_STATE.RUNNING;
@@ -342,20 +379,24 @@ class AimTrainer {
     const config = DIFFICULTY_CONFIG[this.selected.difficulty];
     const modeConfig = MODE_CONFIG[this.selected.mode];
     const arenaRect = this.arena.getBoundingClientRect();
-    const size = isDecoy ? DECOY_CONFIG.size : config.targetSize;
+    const width = Math.round(config.targetWidth * (isDecoy ? DECOY_CONFIG.sizeScale : 1));
+    const height = Math.round(config.targetHeight * (isDecoy ? DECOY_CONFIG.sizeScale : 1));
+    const color = isDecoy ? oppositeColor(this.currentColor) : this.currentColor;
+    const number = randomTargetNumber();
 
-    // 位置表示目标圆心；配合 CSS 的 translate(-50%, -50%) 居中渲染
-    const halfSize = size / 2;
+    // 位置表示目标中心；配合 CSS 的 translate(-50%, -50%) 居中渲染
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
     let x = 0;
     let y = 0;
     let isPositionValid = false;
 
     // 多次尝试寻找一个既不越界、也不与其他目标重叠的位置
     for (let attempt = 0; attempt < SPAWN_MAX_ATTEMPTS; attempt++) {
-      x = randomRange(halfSize, arenaRect.width - halfSize);
-      y = randomRange(halfSize, arenaRect.height - halfSize);
+      x = randomRange(halfWidth, arenaRect.width - halfWidth);
+      y = randomRange(halfHeight, arenaRect.height - halfHeight);
 
-      const candidate = { x, y, size };
+      const candidate = { x, y, width, height };
       if (!this.targets.some(existing => isOverlapping(candidate, existing))) {
         isPositionValid = true;
         break;
@@ -367,10 +408,15 @@ class AimTrainer {
     if (!isPositionValid && this.targets.length > 0) {
       let bestDistance = -1;
       for (let attempt = 0; attempt < SPAWN_MAX_ATTEMPTS; attempt++) {
-        const candidateX = randomRange(halfSize, arenaRect.width - halfSize);
-        const candidateY = randomRange(halfSize, arenaRect.height - halfSize);
+        const candidateX = randomRange(halfWidth, arenaRect.width - halfWidth);
+        const candidateY = randomRange(halfHeight, arenaRect.height - halfHeight);
         const nearestDistance = this.targets.reduce((minDistance, existing) => {
-          const distance = Math.hypot(candidateX - existing.x, candidateY - existing.y);
+          const dx = candidateX - existing.x;
+          const dy = candidateY - existing.y;
+          const distance = Math.hypot(
+            dx / ((width + existing.width) / 2),
+            dy / ((height + existing.height) / 2)
+          );
           return Math.min(minDistance, distance);
         }, Number.POSITIVE_INFINITY);
 
@@ -384,11 +430,18 @@ class AimTrainer {
 
     const target = document.createElement('div');
     target.className = 'target';
+    target.dataset.color = color;
+    target.style.setProperty('--target-number-size', `${Math.round(height * 0.68)}px`);
     if (isDecoy) target.classList.add('decoy');
-    target.style.width = `${size}px`;
-    target.style.height = `${size}px`;
+    target.style.width = `${width}px`;
+    target.style.height = `${height}px`;
     target.style.left = `${x}px`;
     target.style.top = `${y}px`;
+    target.innerHTML = `
+      <span class="target-bar target-bar-left"></span>
+      <span class="target-number">${number}</span>
+      <span class="target-bar target-bar-right"></span>
+    `;
 
     const angle = Math.random() * Math.PI * 2;
     const vx = modeConfig.movingTargets ? Math.cos(angle) * modeConfig.speed : 0;
@@ -401,9 +454,19 @@ class AimTrainer {
       y,
       vx,
       vy,
-      size,
+      width,
+      height,
+      color,
+      number,
       isDecoy,
       spawnTime: performance.now()
+    });
+  }
+
+  repaintTargets() {
+    this.targets.forEach(targetObj => {
+      targetObj.color = targetObj.isDecoy ? oppositeColor(this.currentColor) : this.currentColor;
+      targetObj.element.dataset.color = targetObj.color;
     });
   }
 
@@ -424,20 +487,21 @@ class AimTrainer {
       targetObj.y += targetObj.vy;
 
       // 边界反弹，并同步取反速度，防止目标卡在边界外
-      const halfSize = targetObj.size / 2;
-      if (targetObj.x - halfSize <= 0) {
-        targetObj.x = halfSize;
+      const halfWidth = targetObj.width / 2;
+      const halfHeight = targetObj.height / 2;
+      if (targetObj.x - halfWidth <= 0) {
+        targetObj.x = halfWidth;
         targetObj.vx = Math.abs(targetObj.vx);
-      } else if (targetObj.x + halfSize >= arenaRect.width) {
-        targetObj.x = arenaRect.width - halfSize;
+      } else if (targetObj.x + halfWidth >= arenaRect.width) {
+        targetObj.x = arenaRect.width - halfWidth;
         targetObj.vx = -Math.abs(targetObj.vx);
       }
 
-      if (targetObj.y - halfSize <= 0) {
-        targetObj.y = halfSize;
+      if (targetObj.y - halfHeight <= 0) {
+        targetObj.y = halfHeight;
         targetObj.vy = Math.abs(targetObj.vy);
-      } else if (targetObj.y + halfSize >= arenaRect.height) {
-        targetObj.y = arenaRect.height - halfSize;
+      } else if (targetObj.y + halfHeight >= arenaRect.height) {
+        targetObj.y = arenaRect.height - halfHeight;
         targetObj.vy = -Math.abs(targetObj.vy);
       }
 
@@ -454,28 +518,27 @@ class AimTrainer {
 
         const dx = b.x - a.x;
         const dy = b.y - a.y;
-        const distance = Math.hypot(dx, dy);
-        const minDistance = (a.size + b.size) / 2 + TARGET_SPACING;
+        const overlapX = (a.width + b.width) / 2 + TARGET_SPACING - Math.abs(dx);
+        const overlapY = (a.height + b.height) / 2 + TARGET_SPACING - Math.abs(dy);
+        const directionX = dx === 0 ? 1 : Math.sign(dx);
+        const directionY = dy === 0 ? 1 : Math.sign(dy);
 
-        // 两个中心完全重合时，使用固定方向分离，避免除以 0
-        const safeDx = distance === 0 ? 1 : dx / distance;
-        const safeDy = distance === 0 ? 0 : dy / distance;
-        const separation = (minDistance - distance) / 2;
-
-        // 位置分离
-        a.x -= safeDx * separation;
-        a.y -= safeDy * separation;
-        b.x += safeDx * separation;
-        b.y += safeDy * separation;
-
-        // 速度沿碰撞法线交换，模拟同质量弹性碰撞
-        const relativeVelocity = (b.vx - a.vx) * safeDx + (b.vy - a.vy) * safeDy;
-        if (relativeVelocity < 0) {
-          a.vx += safeDx * relativeVelocity;
-          a.vy += safeDy * relativeVelocity;
-          b.vx -= safeDx * relativeVelocity;
-          b.vy -= safeDy * relativeVelocity;
+        // 沿重叠量更小的轴分离，减少移动目标的抖动
+        if (overlapX < overlapY) {
+          a.x -= directionX * overlapX / 2;
+          b.x += directionX * overlapX / 2;
+        } else {
+          a.y -= directionY * overlapY / 2;
+          b.y += directionY * overlapY / 2;
         }
+
+        // 同质量目标交换速度，避免持续相互穿透
+        const tempVx = a.vx;
+        const tempVy = a.vy;
+        a.vx = b.vx;
+        a.vy = b.vy;
+        b.vx = tempVx;
+        b.vy = tempVy;
 
         // 分离后重新 clamp 到边界内
         this.clampTarget(a, arenaRect);
@@ -520,7 +583,10 @@ class AimTrainer {
       }
 
       this.removeTarget(target);
+      this.currentColor = randomTargetColor();
+      this.repaintTargets();
       this.spawnTarget();
+      this.updateCurrentColor();
     } else {
       this.misses++;
       this.streak = 0;
@@ -539,9 +605,10 @@ class AimTrainer {
 
   // 将单个目标限制在测试区域内部，保证圆边不越界
   clampTarget(targetObj, rect) {
-    const halfSize = targetObj.size / 2;
-    targetObj.x = Math.max(halfSize, Math.min(rect.width - halfSize, targetObj.x));
-    targetObj.y = Math.max(halfSize, Math.min(rect.height - halfSize, targetObj.y));
+    const halfWidth = targetObj.width / 2;
+    const halfHeight = targetObj.height / 2;
+    targetObj.x = Math.max(halfWidth, Math.min(rect.width - halfWidth, targetObj.x));
+    targetObj.y = Math.max(halfHeight, Math.min(rect.height - halfHeight, targetObj.y));
     targetObj.element.style.left = `${targetObj.x}px`;
     targetObj.element.style.top = `${targetObj.y}px`;
   }
@@ -569,6 +636,12 @@ class AimTrainer {
 
   updateDecoyHits() {
     this.decoyHitsEl.textContent = this.decoyHits || 0;
+  }
+
+  updateCurrentColor() {
+    if (!this.currentColorEl) return;
+    this.currentColorEl.textContent = this.currentColor === 'blue' ? '蓝色' : '红色';
+    this.currentColorEl.dataset.color = this.currentColor;
   }
 
   updateTimeLeft(seconds) {

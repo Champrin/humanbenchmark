@@ -45,6 +45,10 @@
           <span class="hud-label">干扰命中</span>
           <span class="hud-value" id="decoyHits">0</span>
         </div>
+        <div class="hud-item">
+          <span class="hud-label">当前颜色</span>
+          <span class="hud-value color-indicator" id="currentColor">--</span>
+        </div>
       </div>
 
       <!-- 游戏画布 -->
@@ -52,7 +56,7 @@
         <!-- 开始界面 -->
         <div class="start-screen" id="startScreen">
           <h1>FPS 反应速度测试</h1>
-          <p>屏幕同时出现多个目标，击破一个立即刷新。训练快速定位与目标切换。</p>
+          <p>屏幕同时出现多个赛博朋克风格长方形目标，击破一个立即刷新。训练快速定位与目标切换。</p>
           <div class="settings">
             <div class="setting-row">
               <label for="modeSelect">模式</label>
@@ -80,7 +84,7 @@
             </div>
           </div>
           <button class="start-btn" id="startBtn">开始训练</button>
-          <p class="tip">提示：保持准星稳定，优先打击距离最近的目标；红色纯色圆为干扰项，点击会扣分。</p>
+          <p class="tip">提示：保持准星稳定，优先打击当前颜色目标；另一种颜色为干扰项，点击会扣分。</p>
         </div>
       </div>
     </section>
@@ -90,7 +94,7 @@
       <h2>玩法说明</h2>
       <ol class="howto-list">
         <li>选择模式、难度和训练时长，点击“开始训练”。</li>
-        <li>屏幕会同时出现多个圆形目标。</li>
+        <li>屏幕会同时出现多个长方形目标。</li>
         <li>点击命中目标即得分，目标被击破后立即刷新新目标。</li>
         <li>点击空白处计为未命中，连击数会清零。</li>
         <li>时间结束后查看成绩，可选择“再来一局”。</li>
