@@ -581,7 +581,7 @@ class AimTrainer {
       this.decoyHits++;
       this.misses++;
       this.streak = 0;
-      this.score = Math.max(0, this.score - DECOY_CONFIG.penalty);
+      this.score -= DECOY_CONFIG.penalty;
 
       this.removeTarget(target);
       this.spawnTarget(true);
