@@ -11,7 +11,8 @@ const DIFFICULTY_CONFIG = {
 const MODE_CONFIG = {
   classic:   { scorePerHit: 100, movingTargets: false, speed: 0 },
   precision: { scorePerHit: 150, movingTargets: true, speed: 1.5 },
-  hardcore:  { scorePerHit: 200, movingTargets: true, speed: 3.0 }
+  hardcore:  { scorePerHit: 200, movingTargets: true, speed: 3.0 },
+  fixedColor: { scorePerHit: 125, movingTargets: false, speed: 0, fixedColor: true }
 };
 
 // 目标颜色：蓝 / 红
@@ -35,7 +36,8 @@ const DECOY_CONFIG = {
 const MODE_LABEL = {
   classic: '经典',
   precision: '精准',
-  hardcore: '硬核'
+  hardcore: '硬核',
+  fixedColor: '固定颜色'
 };
 
 const DIFFICULTY_LABEL = {
@@ -583,8 +585,11 @@ class AimTrainer {
       }
 
       this.removeTarget(target);
-      this.currentColor = randomTargetColor();
-      this.repaintTargets();
+      // 固定颜色模式：整局保持开局随机到的颜色不变
+      if (!MODE_CONFIG[this.selected.mode].fixedColor) {
+        this.currentColor = randomTargetColor();
+        this.repaintTargets();
+      }
       this.spawnTarget();
       this.updateCurrentColor();
     } else {
