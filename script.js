@@ -112,6 +112,7 @@ class AimTrainer {
     this.streakEl = document.getElementById('streak');
     this.decoyHitsEl = document.getElementById('decoyHits');
     this.currentColorEl = document.getElementById('currentColor');
+    this.precisionEl = document.getElementById('precision');
     this.modeSelect = document.getElementById('modeSelect');
     this.difficultyGroup = document.getElementById('difficultySelect');
     this.durationGroup = document.getElementById('durationSelect');
@@ -127,6 +128,8 @@ class AimTrainer {
       highestScore: document.getElementById('highestScore'),
       lastPlayed: document.getElementById('lastPlayed')
     };
+
+    this.stats.precision = document.getElementById('avgPrecision');
 
     this.state = GAME_STATE.NOT_STARTED;
     this.targets = [];
@@ -239,6 +242,7 @@ class AimTrainer {
     this.streak = 0;
     this.bestStreak = 0;
     this.reactionTimes = [];
+    this.precisions = [];
     this.currentColor = randomTargetColor();
 
     this.arena.querySelectorAll('.target').forEach(t => t.remove());
@@ -249,6 +253,7 @@ class AimTrainer {
     this.updateStreak();
     this.updateDecoyHits();
     this.updateCurrentColor();
+    this.updatePrecision();
     this.updateTimeLeft(this.selected.duration);
 
     this.state = GAME_STATE.RUNNING;
@@ -292,6 +297,7 @@ class AimTrainer {
     const avgReaction = this.reactionTimes.length > 0
       ? Math.round(this.reactionTimes.reduce((a, b) => a + b, 0) / this.reactionTimes.length)
       : 0;
+    const avgPrecision = this.getAveragePrecision();
 
     const record = {
       score: this.score,
@@ -300,6 +306,7 @@ class AimTrainer {
       accuracy,
       bestStreak: this.bestStreak,
       avgReaction,
+      avgPrecision,
       mode: this.selected.mode,
       difficulty: this.selected.difficulty,
       duration: this.selected.duration,
@@ -319,7 +326,7 @@ class AimTrainer {
     const history = this.loadHistory();
 
     if (history.length === 0) {
-      this.scoreTableBody.innerHTML = '<tr class="empty-row"><td colspan="7">暂无训练记录，完成一局后自动保存。</td></tr>';
+      this.scoreTableBody.innerHTML = '<tr class="empty-row"><td colspan="8">暂无训练记录，完成一局后自动保存。</td></tr>';
       return;
     }
 
@@ -328,12 +335,19 @@ class AimTrainer {
         <td>${index + 1}</td>
         <td><strong>${record.score}</strong></td>
         <td>${record.accuracy}%</td>
+        <td>${Number.isFinite(record.avgPrecision) ? record.avgPrecision : '--'}%</td>
         <td>${MODE_LABEL[record.mode] || record.mode}</td>
         <td>${DIFFICULTY_LABEL[record.difficulty] || record.difficulty}</td>
         <td>${record.duration}s</td>
         <td>${formatDate(record.playedAt)}</td>
       </tr>
     `).join('');
+  }
+
+  getAveragePrecision() {
+    if (this.precisions.length === 0) return 0;
+    const sum = this.precisions.reduce((a, b) => a + b, 0);
+    return Math.round((sum / this.precisions.length) * 100);
   }
 
   renderStats() {
@@ -347,6 +361,7 @@ class AimTrainer {
       this.stats.bestStreak.textContent = '0';
       this.stats.bestReaction.textContent = '--';
       this.stats.highestScore.textContent = '0';
+      this.stats.precision.textContent = '--';
       this.stats.lastPlayed.textContent = '--';
       return;
     }
@@ -364,6 +379,10 @@ class AimTrainer {
     this.stats.bestStreak.textContent = Math.max(...history.map(r => r.bestStreak));
     this.stats.bestReaction.textContent = Number.isFinite(bestReaction) ? `${bestReaction}ms` : '--';
     this.stats.highestScore.textContent = Math.max(...history.map(r => r.score));
+    const precisionRecords = history.filter(r => Number.isFinite(r.avgPrecision));
+    this.stats.precision.textContent = precisionRecords.length > 0
+      ? `${Math.round(precisionRecords.reduce((sum, r) => sum + r.avgPrecision, 0) / precisionRecords.length)}%`
+      : '--';
     this.stats.lastPlayed.textContent = formatDate(lastPlayed);
   }
 
@@ -575,10 +594,20 @@ class AimTrainer {
     }
 
     if (target) {
+      const targetObj = this.targets.find(t => t.element === target);
+      const precision = targetObj
+        ? this.getHitPrecision(targetObj, event.clientX, event.clientY)
+        : 1;
+
       this.hits++;
       this.streak++;
       this.bestStreak = Math.max(this.bestStreak, this.streak);
-      this.score += MODE_CONFIG[this.selected.mode].scorePerHit + this.streak * 10;
+
+      // 全分 = 模式基础分 + 连击加成；实际得分按点击点距目标中心的百分比折算
+      const fullScore =
+        MODE_CONFIG[this.selected.mode].scorePerHit + this.streak * 10;
+      this.score += Math.round(fullScore * precision);
+      this.precisions.push(precision);
 
       if (this.lastShotTime > 0) {
         this.reactionTimes.push(now - this.lastShotTime);
@@ -601,11 +630,29 @@ class AimTrainer {
     this.updateScore();
     this.updateAccuracy();
     this.updateStreak();
+    this.updatePrecision();
   }
 
   removeTarget(targetElement) {
     this.targets = this.targets.filter(t => t.element !== targetElement);
     targetElement.remove();
+  }
+
+  // 计算点击位置相对目标中心的精准度：中心 = 1，边缘 = 0
+  getHitPrecision(targetObj, clientX, clientY) {
+    const rect = targetObj.element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+
+    // 用椭圆归一化距离适配长方形目标，避免只按横向或纵向计算
+    const normalizedDistance = Math.hypot(
+      dx / (rect.width / 2),
+      dy / (rect.height / 2)
+    );
+
+    return Math.max(0, 1 - Math.min(1, normalizedDistance));
   }
 
   // 将单个目标限制在测试区域内部，保证圆边不越界
@@ -652,6 +699,14 @@ class AimTrainer {
     this.arena.dataset.color = this.currentColor;
   }
 
+  updatePrecision() {
+    if (!this.precisionEl) return;
+    const avgPrecision = this.getAveragePrecision();
+    this.precisionEl.textContent = this.precisions.length > 0
+      ? `${avgPrecision}%`
+      : '--%';
+  }
+
   updateTimeLeft(seconds) {
     this.timeLeftEl.textContent = formatTime(seconds);
   }
@@ -672,6 +727,7 @@ class AimTrainer {
     const avgReaction = this.reactionTimes.length > 0
       ? Math.round(this.reactionTimes.reduce((a, b) => a + b, 0) / this.reactionTimes.length)
       : 0;
+    const avgPrecision = this.getAveragePrecision();
 
     const resultScreen = document.createElement('div');
     resultScreen.className = 'start-screen result-screen';
@@ -685,6 +741,7 @@ class AimTrainer {
         <div class="result-item"><span>干扰命中</span><strong>${this.decoyHits}</strong></div>
         <div class="result-item"><span>最高连击</span><strong>${this.bestStreak}</strong></div>
         <div class="result-item"><span>平均反应</span><strong>${avgReaction}ms</strong></div>
+        <div class="result-item"><span>平均精确率</span><strong>${avgPrecision}%</strong></div>
       </div>
       <button class="start-btn" id="restartBtn">再来一局</button>
     `;

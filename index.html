@@ -49,6 +49,10 @@
           <span class="hud-label">当前颜色</span>
           <span class="hud-value color-indicator" id="currentColor">--</span>
         </div>
+        <div class="hud-item">
+          <span class="hud-label">精确率</span>
+          <span class="hud-value" id="precision">--%</span>
+        </div>
       </div>
 
       <!-- 游戏画布 -->
@@ -103,15 +107,15 @@
       <div class="howto-cards">
         <div class="howto-card">
           <h3>经典模式</h3>
-          <p>目标静止，适合热身与基础定位。</p>
+          <p>目标静止，适合热身与基础定位。目标颜色可能会变化。</p>
         </div>
         <div class="howto-card">
           <h3>精准模式</h3>
-          <p>目标缓慢移动，训练追踪与微调。</p>
+          <p>目标缓慢移动，训练追踪与微调。目标颜色可能会变化。</p>
         </div>
         <div class="howto-card">
           <h3>硬核模式</h3>
-          <p>目标快速移动，训练极限反应。</p>
+          <p>目标快速移动，训练极限反应。目标颜色可能会变化。</p>
         </div>
         <div class="howto-card">
           <h3>固定颜色模式</h3>
@@ -133,6 +137,7 @@
               <th>#</th>
               <th>得分</th>
               <th>命中率</th>
+              <th>精确率</th>
               <th>模式</th>
               <th>难度</th>
               <th>时长</th>
@@ -141,7 +146,7 @@
           </thead>
           <tbody id="scoreTableBody">
             <tr class="empty-row">
-              <td colspan="7">暂无训练记录，完成一局后自动保存。</td>
+              <td colspan="8">暂无训练记录，完成一局后自动保存。</td>
             </tr>
           </tbody>
         </table>
@@ -179,6 +184,10 @@
         <div class="stat-card">
           <span>最高得分</span>
           <strong id="highestScore">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>平均精确率</span>
+          <strong id="avgPrecision">--</strong>
         </div>
         <div class="stat-card">
           <span>最近训练</span>
