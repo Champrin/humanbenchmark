@@ -12,7 +12,7 @@ const MODE_CONFIG = {
   classic:   { scorePerHit: 100, movingTargets: false, speed: 0 },
   precision: { scorePerHit: 150, movingTargets: true, speed: 1.5 },
   hardcore:  { scorePerHit: 200, movingTargets: true, speed: 3.0 },
-  fixedColor: { scorePerHit: 125, movingTargets: false, speed: 0, fixedColor: true }
+  fixedColor: { scorePerHit: 100, movingTargets: false, speed: 0, fixedColor: true }
 };
 
 // 目标颜色：蓝 / 红
@@ -27,9 +27,9 @@ const TARGET_NUMBER_RANGE = { min: 1, max: 5 };
 
 // 干扰项配置：与当前目标颜色相反，点击扣分
 const DECOY_CONFIG = {
-  count: 2,         // 同屏干扰项数量
-  sizeScale: 1.08,  // 干扰项略大，便于识别但仍保持同类外形
-  penalty: 50       // 点击扣分
+  count: 3,         // 同屏干扰项数量
+  sizeScale: 1.0,  // 干扰项略大，便于识别但仍保持同类外形
+  penalty: 400       // 点击扣分
 };
 
 /* ===== 文案映射 ===== */
