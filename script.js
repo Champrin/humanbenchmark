@@ -10,8 +10,8 @@ const DIFFICULTY_CONFIG = {
 
 const MODE_CONFIG = {
   classic:   { scorePerHit: 100, movingTargets: false, speed: 0 },
-  precision: { scorePerHit: 150, movingTargets: true, speed: 1.5 },
-  hardcore:  { scorePerHit: 200, movingTargets: true, speed: 3.0 },
+  precision: { scorePerHit: 150, movingTargets: true, speed: 3.0 },
+  hardcore:  { scorePerHit: 200, movingTargets: true, speed: 6.6 },
   fixedColor: { scorePerHit: 100, movingTargets: false, speed: 0, fixedColor: true }
 };
 
